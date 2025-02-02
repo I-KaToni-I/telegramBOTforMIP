@@ -137,5 +137,5 @@ async function autoSave(authClient) {
 
 export const autoUpdateDB = async () => {
     // authorize().then(autoSave)
-    // setInterval(() => authorize().then(autoSave).catch(console.error), 300000);
+    // setInterval(() => authorize().then(autoSave).catch(console.error), 600000);
 }
