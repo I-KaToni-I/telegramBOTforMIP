@@ -1,0 +1,19 @@
+{
+  "name": "mipgre-git",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node ./src/app.js"
+  },
+  "author": "KaToni",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "googleapis": "^144.0.0",
+    "node-telegram-bot-api": "^0.66.0",
+    "pg": "^8.13.1",
+    "pg-format": "^1.0.4"
+  }
+}
