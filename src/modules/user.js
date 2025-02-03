@@ -1,18 +1,16 @@
 import { string } from 'pg-format'
 import {pool} from '../config/db.js'
+import { getDay } from './scheduleLogic.js'
 
 
 
 export const saveUser = async (msg) => {
-    console.log(msg);
     let id = msg.chat.id
     let first_name = msg.chat.first_name
     let last_name = msg.chat.last_name
     let username = msg.chat.username
     
-    
     let ids = await pool.query(`SELECT id FROM users WHERE id = ${id}`);
-
 
     if (!ids.rowCount) {
         await pool.query(`INSERT INTO users (id, first_name, last_name, username) VALUES (${id}, '${String(first_name)}', '${String(last_name)}', '${String(username)}')`);
@@ -21,13 +19,15 @@ export const saveUser = async (msg) => {
 }
 
 export const setGroup = async (id, group) => {
-    await pool.query(`UPDATE users SET "group" = '${group}', "profile" = 'student' WHERE id = ${id}`);
+    let tName = await pool.query(`SELECT * FROM groups WHERE name LIKE '%${group}%'`);
+    tName = tName.rows[0]
+    await pool.query(`UPDATE users SET "group" = '${tName.name}', "profile" = 'student', id_tnorgroup = ${tName.id}  WHERE id = ${id}`);
 }
 
 export const setFullName = async (id, name) => {
-    let tName = await pool.query(`SELECT name FROM teacher_names WHERE name LIKE '%${name}%'`);
-    tName = tName.rows[0].name
-    await pool.query(`UPDATE users SET "full_teacher_name" = '${tName}', "profile" = 'teacher' WHERE id = ${id}`);
+    let tName = await pool.query(`SELECT * FROM teacher_names WHERE name LIKE '%${name}%'`);
+    tName = tName.rows[0]
+    await pool.query(`UPDATE users SET "full_teacher_name" = '${tName.name}', "profile" = 'teacher', id_tnorgroup = ${tName.id} WHERE id = ${id}`);
 }
 
 export const setData = async (id, column, data, type) => {
@@ -87,7 +87,8 @@ export const showProfile = async (id, action) => {
             txt += `▸ 👥 Группа: ${user.group}\n`
             txt += `▸ 📆 Рассылка: ${user.time_notification_flag ? 'включена' : 'выключена'}\n`
             txt += `▸ ⌚️ Время рассылки: ${user.time_notification}\n`
-            txt += `▀*`
+            txt += `▀*\n`
+            txt += `_Если нет удобной клавиатуры "сегодня/завтра" ⮕ /keyt_`
             keyB.inline_keyboard.push([])
             keyB.inline_keyboard[0].push({ "text": "СМЕНИТЬ ГРУППУ", 'callback_data': 'changeFNorGroup-' + user.delmsg + '-group'})    
         } else if (user.profile === "teacher") {
@@ -96,7 +97,8 @@ export const showProfile = async (id, action) => {
             txt += `▸ 👥 ФИО: ${user.full_teacher_name}\n`
             txt += `▸ 📆 Рассылка: ${user.time_notification_flag ? 'включена' : 'выключена'}\n`
             txt += `▸ ⌚️ Время рассылки: ${user.time_notification}\n`
-            txt += `▀*`
+            txt += `▀*\n`
+            txt += `_Если нет удобной клавиатуры "сегодня/завтра" ⮕ /keyt_`
             keyB.inline_keyboard.push([])
             keyB.inline_keyboard[0].push({ "text": "СМЕНИТЬ ФИО", 'callback_data': 'changeFNorGroup-' + user.delmsg + '-fullName'})    
         }
@@ -138,10 +140,40 @@ export const reportFunction = async (id, text, msgID) => {
 }
 
 export const reportPost = async (id) => {
-    let user = await pool.query(`SELECT report_text, id FROM users WHERE id = ${id}`);
+    let user = await pool.query(`SELECT report_text, id, report_data FROM users WHERE id = ${id}`);
 
-    // console.log(user.rows[0]);
+    user = user.rows[0]
+
+    let report_data = user.report_data.split('-')
+
+    let gORfn  
+
+    if (report_data[0] === 'student') {
+        gORfn = await pool.query(`SELECT name FROM public.groups WHERE id = ${report_data[1]}`);
+    } else {
+        gORfn = await pool.query(`SELECT name FROM teacher_names WHERE id = ${report_data[1]}`);
+    }
+    gORfn = gORfn.rows[0].name
+
+    let dayText = await getDay('00', report_data[2], {'profile': report_data[0], 'group': gORfn, 'full_teacher_name': gORfn})
+
+    let textFIN = `ID Пользователя: ${id}\n`
+    + `Жалоба на:\n${dayText}\n\n`
+    + `Описание проблемы:\n${user.report_text}`
+
+    await pool.query(`INSERT INTO tickets(user_id,type) VALUES(${user.id}, 'MIP')`);
+
+    let idT = await pool.query(`'SELECT id FROM tickets ORDER BY id DESC LIMIT 1'`);
+
+    idT = idT.rows[0].ticket_id
+
+    await pool.query(`INSERT INTO messages(ticket_id, sender_id, message) VALUES (${idT}, ${user.id}, ${textFIN})`);
+    
 }
+
+
+
+
 
 // report_text
 // ▄
@@ -162,51 +194,5 @@ export const reportPost = async (id) => {
 //     profile: 'student'
 // }
 
-function getInfoUser(chat_id, info) {
-    let file = fs.readFileSync("../SAVES/student.json", { encoding: 'utf8' })
-    let JN = JSON.parse(file)
-
-
-    return JN[chat_id][info]
-}
-
-
-
-function stressSave(ID) {
-    let file = fs.readFileSync("../SAVES/student.json", { encoding: 'utf8' })
-    let JN = JSON.parse(file)
-    if ("usageCounter" in JN[ID]) {
-        if (typeof JN[ID]["usageCounter"] == 'string') {
-            JN[ID]["usageCounter"] = 1
-        } else {
-            JN[ID]["usageCounter"] = JN[ID]["usageCounter"] + 1
-        }
-        JN[ID]["lastUse"] = new Date()
-        
-    } else {
-        JN[ID]["usageCounter"] = 1
-        JN[ID]["lastUse"] = new Date()
-    }
-    fs.writeFileSync("../SAVES/student.json", JSON.stringify(JN))
-}
-
-function saveBotMSG(chat_id, BotTXT) {
-    let file = fs.readFileSync("../SAVES/student.json", { encoding: 'utf8' })
-    let JN = JSON.parse(file)
-
-    if (!JN[chat_id]["BotMSG"]) {
-        JN[chat_id]["BotMSG"] = []
-    }
-
-    JN[chat_id]["BotMSG"].push(BotTXT)
-    
-    if (JN[chat_id]["BotMSG"].length > 5){
-        JN[chat_id]["BotMSG"] = JN[chat_id]["BotMSG"].slice(1)
-    }
-    
-
-
-    fs.writeFileSync("../SAVES/student.json", JSON.stringify(JN))
-}
 
 

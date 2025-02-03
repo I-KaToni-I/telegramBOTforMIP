@@ -101,18 +101,7 @@ async function autoSave(authClient) {
                     dateArr = [dateArr[0].split('.'), dateArr[1].split('.')]
                     dateArr = [[dateArr[0][2], dateArr[0][1], dateArr[0][0]].join('.'), [dateArr[1][2], dateArr[1][1], dateArr[1][0]].join('.')]
                     
-                    // console.log('--------------------------------');
-                    // console.log(el);
-                    
-                    // console.log(new Date(dateArr[0]));
-                    // console.log(new Date(dateArr[1]));
-                    // console.log(el.title);
-                    // console.log(el.location);
-                    // console.log(el.dateTime);
-                    
-                    // console.log(`INSERT INTO events (group_name, start_date, finish_date, title, location, dateTime) VALUES ('${group}', ${new Date(dateArr[0])}, ${new Date(dateArr[1])}, '${el.title}', '${el.location}', '${el.dateTime.join('-')}')`);
-                    // console.log('--------------------------------');
-                    //                                                                                                                                                                      to_timestamp(${Date.now()} / 1000.0)
+                    //                                                                                                                                                to_timestamp(${Date.now()} / 1000.0)
                     await pool.query(`INSERT INTO events (group_name, start_date, finish_date, title, location, date_time) VALUES ('${group}', to_timestamp(${+new Date(dateArr[0])} / 1000.0),  to_timestamp(${+new Date(dateArr[1])} / 1000.0), '${el.title}', '${el.location}', '${el.dateTime.join('-')}')`);
                     
                 }

@@ -27,7 +27,7 @@ function beautifulDate(text) {
 }
 
 
-export const getDay = async (id, txt) => {
+export const getDay = async (id, txt, userR) => {
 
     let date = new Date().addHours(3)
     if (txt === 'сегодня') {
@@ -40,8 +40,14 @@ export const getDay = async (id, txt) => {
         date = `${txt[2]}-${txt[1]}-${txt[0]}`
     }
 
-    let user = await pool.query(`SELECT "group", profile, full_teacher_name FROM users WHERE id = ${id}`);
-    user = user.rows[0]
+    let user
+    if (userR) {
+        user = userR
+    } else {        
+        user = await pool.query(`SELECT "group", profile, full_teacher_name FROM users WHERE id = ${id}`);
+        user = user.rows[0]
+    }
+    
 
     let arrNeedEvent
 

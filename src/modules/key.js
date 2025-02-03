@@ -325,21 +325,40 @@ export const timeSetting = async (msgID, action, time) => {
 
 
 
+export const KEYBOARD_TT = {
+    reply_markup: JSON.stringify({
+    "keyboard": [
+        [{ "text": "Сегодня" },],
+        [{ "text": "Завтра" },],
+    ],
+    "resize_keyboard": true,
+    "one_time_keyboard": true,
+})
+};
 
 
 
 
-
-
-export const KEYBOARD_report_fun = () => {
+export const KEYBOARD_report_fun = (prof, profID, text) => {
     let keyB = {
         "inline_keyboard": [
 
         ]
     };
 
+    let date = new Date().addHours(3)
+    if (text === 'сегодня') {
+        date = `${date.getFullYear()}.${date.getMonth()+1}.${date.getDate()}` // 2025-01-02
+    } else if (text === 'завтра') {
+        date = new Date(date.getFullYear(), date.getMonth(), date.getDate()+1)
+        date = `${date.getFullYear()}.${date.getMonth()+1}.${date.getDate()}` // 2025-01-01
+    } else {
+        date = text
+    }
+
+
     keyB.inline_keyboard.push([])
-    keyB.inline_keyboard[0].push({ "text": 'ПРОБЛЕМА?', 'callback_data': 'report-'})
+    keyB.inline_keyboard[0].push({ "text": 'ПРОБЛЕМА?', 'callback_data': `report-${prof}-${profID}-${date}`})
 
     return {reply_markup: `{"inline_keyboard":${JSON.stringify(keyB.inline_keyboard)}}`}
 }

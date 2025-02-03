@@ -3,7 +3,7 @@ import 'dotenv/config'
 import {pool} from './config/db.js'
 import { getData, reportFunction, reportPost, saveUser, setData, setFullName, setGroup, setMSGidForDel, setProfile, showProfile } from './modules/user.js';
 import { autoUpdateDB } from './autoUpdateDB/autoUpdateDB.js';
-import { autoGroups, autoTeacherName, fun_getDay, KEYBOARD_report_fun, timeSetting } from './modules/key.js';
+import { autoGroups, autoTeacherName, fun_getDay, KEYBOARD_report_fun, KEYBOARD_TT, timeSetting } from './modules/key.js';
 import { getDay } from './modules/scheduleLogic.js';
 
 process.env.NTBA_FIX_350 = true;
@@ -30,6 +30,7 @@ const token = process.env.botTOKEN
 // токен релиз бота
 // const token =
 
+
 const bot = new TelegramApi(token, { polling: true })
 
 const botOnMSG = () => {
@@ -43,7 +44,7 @@ const botOnMSG = () => {
         let resUser = await pool.query(`SELECT * FROM users WHERE id = ${chat_id}`)
         resUser = resUser.rows[0]
 
-        // console.log(resUser);
+        // console.log(await pool.query(`SELECT * FROM users ORDER BY id DESC LIMIT 1`));
         
         try {
 
@@ -51,7 +52,7 @@ const botOnMSG = () => {
             if (resUser) {
                 let resTime = await pool.query(`SELECT * FROM users WHERE id = ${chat_id} and NOW() - antispam > '00:00:04'`)
                 if (!resTime.rows.length) {
-                    return bot.sendMessage(chat_id, "Пожалуйста, будьте помедленнее.", {parse_mode: 'HTML'});
+                    return bot.sendMessage(chat_id, "<i>Пожалуйста, будьте помедленнее.\n(1 сообщение раз в 4 сек.)</i>", {parse_mode: 'HTML'});
                 }
                 await pool.query(`UPDATE users SET "antispam" = NOW() WHERE id = ${chat_id}`);
             }
@@ -122,8 +123,10 @@ const botOnMSG = () => {
                 botText = await getDay(chat_id, text)
 
                 await pool.query(`UPDATE users SET "usageCounter" = "usageCounter" + 1, "lastUse" = NOW() WHERE id = ${chat_id}`);
+
                 
-                return bot.sendMessage(chat_id, botText, {parse_mode: 'HTML', ...KEYBOARD_report_fun()});
+                
+                return bot.sendMessage(chat_id, botText, {parse_mode: 'HTML', ...KEYBOARD_report_fun(resUser.profile, resUser.id_tnorgroup, text)});
             }
     
             if (text === "/getday") {
@@ -133,7 +136,17 @@ const botOnMSG = () => {
                 return bot.sendMessage(chat_id, KEYTEXT_getDays[0], {...KEYTEXT_getDays[1], parse_mode: 'HTML'});
             }
 
+            if (text === "/keyt") {
+                return bot.sendMessage(chat_id, "🧩Не удаляйте это сообщение.🧩", {...KEYBOARD_TT, parse_mode: 'HTML'});
+            }
 
+            // if (msg.text.split(' ')[0] === "/addTeacher") {
+            //     let res = await pool.query(`INSERT INTO teacher_names (name) VALUES ('${msg.text.split(' ')[1]}')`);
+
+            //     console.log(res._types);
+
+            //     return
+            // }
     
             return bot.sendMessage(chat_id, "Я вас не понимаю😐")
         } catch (error) {
@@ -159,7 +172,6 @@ const botOnBTN = () => {
         try {
             if (dataBtn[0] === 'report'){
                 let resTime = await pool.query(`SELECT * FROM users WHERE id = ${chat_id} and NOW() - report_datetime > '03:00'`)
-
                 
                 await pool.query(`UPDATE users SET "report_datetime" = NOW() WHERE id = ${chat_id}`);
                 
@@ -176,7 +188,10 @@ const botOnBTN = () => {
                 if (!resTime.rows.length) {
                     return bot.sendMessage(chat_id, "Вы не можете отправлять обращение чаще, чем раз в 3 часа.", {parse_mode: 'HTML'});
                 }
+
+                
                 await setData(chat_id, 'report_flag', 'true', 'boolean')
+                await setData(chat_id, 'report_data', `${dataBtn[1]}-${dataBtn[2]}-${dataBtn[3]}`, 'string')
                 return bot.sendMessage(chat_id, "Опишите вашу проблему.", {parse_mode: 'HTML'});
             }
             
@@ -208,7 +223,7 @@ const botOnBTN = () => {
                 if (dataBtn[2]==='getDay') {
                     botText = await getDay(chat_id, dataBtn[3])
                     await pool.query(`UPDATE users SET "usageCounter" = "usageCounter" + 1, "lastUse" = NOW() WHERE id = ${chat_id}`);
-                    return bot.sendMessage(chat_id, botText, {parse_mode: 'HTML'});
+                    return bot.sendMessage(chat_id, botText, {parse_mode: 'HTML', ...KEYBOARD_report_fun()});
                 }
                 
                 if (KEYTEXT_getDays) {
@@ -354,8 +369,6 @@ const botOnBTN = () => {
 
 
             
-            
-            
         } catch (error) {
             console.log(error)
         }
@@ -363,10 +376,6 @@ const botOnBTN = () => {
     })
 }
 botOnBTN()
-
-
-
-
 
 
 
